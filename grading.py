@@ -4,7 +4,8 @@ import os, time, sys
 from os.path import isfile, join
 import shutil
 
-os.system('./build')
+os.system('./stopall >/dev/null 2>/dev/null')
+os.system('./build >/dev/null 2>/dev/null')
 
 test_output = 'test_output'
 tests = 'tests'
@@ -24,6 +25,11 @@ for f in os.listdir(tests):
             os.system('./master.py < ' + abs_f + \
                     ' 2> ' + join(test_output, fn+'.err') +\
                     ' > ' + join(test_output, fn+'.output'))
+
+            os.system('./stopall >/dev/null 2>/dev/null')
+            os.system("ps aux | grep -i java | awk '{print $2}' | xargs kill -9 >/dev/null 2>/dev/null")
+            os.system("ps aux | grep -i process | awk '{print $2}' | xargs kill -9 >/dev/null 2>/dev/null")
+            os.system("ps aux | grep -i python | grep -v grading | awk '{print $2}' | xargs kill -9 >/dev/null 2>/dev/null")
 
             with open(join(test_output, fn+'.output')) as fi:
                     out = fi.read().strip().split('\n')

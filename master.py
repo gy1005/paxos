@@ -3,7 +3,7 @@
 The master program for CS5414 three phase commit project.
 """
 
-import sys
+import sys, os
 import subprocess
 import time
 from threading import Thread, Lock
@@ -90,11 +90,11 @@ def send(index, data, set_wait=False):
         wait_chat_log = True
     threads[pid].send(data)
 
-def exit(exit=False):
+def exit(is_exit=False):
     global threads, wait_chat_log
 
     wait = wait_chat_log
-    wait = wait and (not exit)
+    wait = wait and (not is_exit)
     while wait:
         time.sleep(0.01)
         wait = wait_chat_log
@@ -104,8 +104,11 @@ def exit(exit=False):
         threads[k].close()
     subprocess.Popen(['./stopall'], stdout=open('/dev/null'), stderr=open('/dev/null'))
     sys.stdout.flush()
-    time.sleep(0.1)
-    sys.exit(0)
+    time.sleep(1)
+    if is_exit:
+        os._exit(0)
+    else:
+        sys.exit(0)
 
 def timeout():
     time.sleep(120)
