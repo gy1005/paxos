@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-The master program for CS5414 three phase commit project.
+The master program for CS5414 Paxos project.
 """
 
 import sys, os
