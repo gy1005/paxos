@@ -3,11 +3,13 @@
 The master program for CS5414 Paxos project.
 """
 
-import sys, os
+import os
+import signal
 import subprocess
+import sys
 import time
-from threading import Thread, Lock
 from socket import SOCK_STREAM, socket, AF_INET
+from threading import Thread, Lock
 
 address = 'localhost'
 threads = {}
@@ -24,8 +26,9 @@ started_processes = {}
 
 debug = False
 
+
 class ClientHandler(Thread):
-    def __init__(self, index, address, port):
+    def __init__(self, index, address, port, process):
         Thread.__init__(self)
         self.daemon = True
         self.index = index
@@ -33,6 +36,7 @@ class ClientHandler(Thread):
         self.sock.connect((address, port))
         self.buffer = ""
         self.valid = True
+        self.process = process
 
     def run(self):
         global threads, wait_chat_log, wait_for_ack
@@ -61,14 +65,22 @@ class ClientHandler(Thread):
             else:
                 try:
                     data = self.sock.recv(1024)
-                    #sys.stderr.write(data)
+                    # sys.stderr.write(data)
                     self.buffer += data
                 except:
-                    #print sys.exc_info()
+                    # print sys.exc_info()
                     self.valid = False
                     del threads[self.index]
                     self.sock.close()
                     break
+
+    def kill(self):
+        if self.valid:
+            try:
+                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            except:
+                pass
+            self.close()
 
     def send(self, s):
         if self.valid:
@@ -81,6 +93,7 @@ class ClientHandler(Thread):
         except:
             pass
 
+
 def send(index, data, set_wait=False):
     global threads, wait_chat_log
     while wait_chat_log:
@@ -89,6 +102,7 @@ def send(index, data, set_wait=False):
     if set_wait:
         wait_chat_log = True
     threads[pid].send(data)
+
 
 def exit(is_exit=False):
     global threads, wait_chat_log
@@ -101,8 +115,8 @@ def exit(is_exit=False):
 
     time.sleep(2)
     for k in threads:
-        threads[k].close()
-    subprocess.Popen(['./stopall'], stdout=open('/dev/null'), stderr=open('/dev/null'))
+        threads[k].kill()
+    subprocess.Popen(['./stopall'], stdout=open('/dev/null', 'w'), stderr=open('/dev/null', 'w'))
     sys.stdout.flush()
     time.sleep(1)
     if is_exit:
@@ -110,13 +124,15 @@ def exit(is_exit=False):
     else:
         sys.exit(0)
 
+
 def timeout():
     time.sleep(120)
     exit(True)
 
+
 def main():
     global threads, wait_chat_log, wait_for_ack, started_processes, debug
-    timeout_thread = Thread(target = timeout, args = ())
+    timeout_thread = Thread(target=timeout, args=())
     timeout_thread.daemon = True
     timeout_thread.start()
 
@@ -124,13 +140,13 @@ def main():
         line = ''
         try:
             line = sys.stdin.readline()
-        except: # keyboard exception, such as Ctrl+C/D
+        except:  # keyboard exception, such as Ctrl+C/D
             exit(True)
-        if line == '': # end of a file
+        if line == '':  # end of a file
             exit()
-        line = line.strip() # remove trailing '\n'
-        if line == 'exit': # exit when reading 'exit' command
-            if wait_for_ack: # waitForAck wait_for_acks these commands
+        line = line.strip()  # remove trailing '\n'
+        if line == 'exit':  # exit when reading 'exit' command
+            if wait_for_ack:  # waitForAck wait_for_acks these commands
                 time.sleep(2)
                 if wait_for_ack:
                     ack_lock.acquire()
@@ -144,10 +160,10 @@ def main():
             exit()
         sp1 = line.split(None, 1)
         sp2 = line.split()
-        if len(sp1) != 2: # validate input
+        if len(sp1) != 2:  # validate input
             continue
-        pid = int(sp2[0]) # first field is pid
-        cmd = sp2[1] # second field is command
+        pid = int(sp2[0])  # first field is pid
+        cmd = sp2[1]  # second field is command
         if cmd == 'waitForAck':
             mid = int(sp2[2])
             ack_lock.acquire()
@@ -164,19 +180,22 @@ def main():
                 started_processes[pid] = True
             else:
                 time.sleep(2)
+
             # start the process
             if debug:
-                subprocess.Popen(['./process', str(pid), sp2[2], sp2[3]])
+                process = subprocess.Popen(['./process', str(pid), sp2[2], sp2[3]], preexec_fn=os.setsid)
             else:
-                subprocess.Popen(['./process', str(pid), sp2[2], sp2[3]], stdout=open('/dev/null'), stderr=open('/dev/null'))
+                process = subprocess.Popen(['./process', str(pid), sp2[2], sp2[3]], stdout=open('/dev/null', 'w'),
+                    stderr=open('/dev/null', 'w'), preexec_fn=os.setsid)
+
             # sleep for a while to allow the process be ready
             time.sleep(1)
             # connect to the port of the pid
-            handler = ClientHandler(pid, address, port)
+            handler = ClientHandler(pid, address, port, process)
             threads[pid] = handler
             handler.start()
         else:
-            if wait_for_ack: # waitForAck wait_for_acks these commands
+            if wait_for_ack:  # waitForAck wait_for_acks these commands
                 time.sleep(2)
                 if wait_for_ack:
                     ack_lock.acquire()
@@ -188,18 +207,19 @@ def main():
             while wait_for_ack:
                 time.sleep(0.1)
 
-            if cmd == 'msg': # message msgid msg
+            if cmd == 'msg':  # message msgid msg
                 msgs[int(sp2[2])] = sp1[1]
                 send(pid, sp1[1])
-            elif cmd[:5] == 'crash': # crashXXX
+            elif cmd[:5] == 'crash':  # crashXXX
                 send(pid, sp1[1])
-            elif cmd == 'get': # get chatLog
-                if not wait_chat_log: # sleep for the first continous get command
+            elif cmd == 'get':  # get chatLog
+                if not wait_chat_log:  # sleep for the first continous get command
                     time.sleep(1)
                 else:
-                    while wait_chat_log: # get command blocks next get command
+                    while wait_chat_log:  # get command blocks next get command
                         time.sleep(0.1)
                 send(pid, sp1[1], set_wait=True)
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'debug':
