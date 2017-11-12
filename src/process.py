@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import os
 import sys
 import socket
 from threading import Thread, Lock
@@ -47,7 +47,7 @@ class Process(Thread):
             paxos_handler.start()
 
     def crash(self):
-        exit(0)
+        os._exit(0)
 
     def paxos_recv_handler(self, conn):
         request_msg = ''
@@ -114,7 +114,7 @@ class Process(Thread):
             if buf == '':
                 break
             requests = buf.split('\n')
-            # print requests
+            print requests
             for request in requests:
                 if request[0:3] == 'msg':
                     request_contents = request.split(' ')
@@ -133,11 +133,14 @@ class Process(Thread):
                 elif request == 'get chatLog':
                     send_msg = ''
                     self.chat_log_lock.acquire()
-                    for i in range(len(self.chat_log)):
-                        if i == 0:
-                            send_msg += self.chat_log[i].data
+                    counter = 0
+                    for key, value in self.chat_log.iteritems():
+                        if counter == 0:
+                            send_msg += value.data
                         else:
-                            send_msg += ',' + self.chat_log[i].data
+                            send_msg += ',' + value.data
+                        counter += 1
+
                     self.chat_log_lock.release()
                     # print send_msg
                     self.master_conn.sendall('chatLog ' + send_msg + '\n')
