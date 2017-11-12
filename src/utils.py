@@ -2,7 +2,7 @@ from threading import Lock
 
 
 screen_lock = Lock()
-PROCESS_PAXOS_PORT_START = 15000
+PROCESS_PAXOS_PORT_START = 20000
 RECV_TIMEOUT = 3
 
 class Decision:
