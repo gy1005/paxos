@@ -120,7 +120,7 @@ class Process(Thread):
             if buf == '':
                 break
             requests = buf.split('\n')
-            # print requests
+            print requests
             for request in requests:
                 if request[0:3] == 'msg':
                     request_contents = request.split(' ')
@@ -139,6 +139,7 @@ class Process(Thread):
                 elif request == 'get chatLog':
                     send_msg = ''
                     self.chat_log_lock.acquire()
+                    print self.chat_log
                     for i in range(len(self.chat_log)):
                         if i == 0:
                             send_msg += self.chat_log[i].data
