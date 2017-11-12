@@ -1,17 +1,20 @@
 import socket
-from threading import Thread, Lock, Condition
+from threading import Thread, Condition
 from message import *
 from utils import *
 import pickle
 
 class Accepter(Thread):
-    def __init__(self, id):
+    def __init__(self, id, process):
         Thread.__init__(self)
         self.id = id
         self.ballot_num = BallotNum(0, -1)
         self.accepted = {}
         self.recv_queue = []
         self.recv_cv = Condition()
+        self.crash_after_p1b = False
+        self.crash_after_p2b = False
+        self.process = process
 
     def run(self):
         while True:
@@ -20,7 +23,8 @@ class Accepter(Thread):
                 self.recv_cv.wait()
             recv_msg = self.recv_queue.pop(0)
             self.recv_cv.release()
-            assert recv_msg.type == 'p1a' or recv_msg.type == 'p2a'
+            assert recv_msg.type == 'p1a' or recv_msg.type == 'p2a' \
+                   or recv_msg.type == 'crashAfterP1b' or recv_msg.type == 'crashAfterP2b'
             if recv_msg.type == 'p1a':
                 if recv_msg.ballot_num > self.ballot_num:
                     self.ballot_num = recv_msg.ballot_num
@@ -35,7 +39,9 @@ class Accepter(Thread):
                 except socket.error:
                     # TODO: socket error handler
                     pass
-            else:
+                if self.crash_after_p1b:
+                    self.process.crash()
+            elif recv_msg.type == 'p2a':
                 if recv_msg.pvalue.ballot_num == self.ballot_num:
                     if recv_msg.pvalue.slot not in self.accepted:
                         self.accepted[recv_msg.pvalue.slot] = [recv_msg.pvalue]
@@ -53,3 +59,9 @@ class Accepter(Thread):
                 except socket.error:
                     # TODO: socket error handler
                     pass
+                if self.crash_after_p2b:
+                    self.process.crash()
+            elif recv_msg.type == 'crashAfterP1b':
+                self.crash_after_p1b = True
+            elif recv_msg.type == 'crashAfterP2b':
+                self.crash_after_p2b = True

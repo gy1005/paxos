@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import signal
 import sys
 import socket
 from threading import Thread, Lock
@@ -22,8 +21,12 @@ class Process(Thread):
         self.chat_log = {}
         self.chat_log_lock = Lock()
         self.master_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.master_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.master_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.paxos_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.accepter = Accepter(self.process_id)
+        self.paxos_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.paxos_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self.accepter = Accepter(self.process_id, self)
         self.leader = Leader(self, self.process_id, self.num_server)
         self.replica = Replica(self, self.process_id, self.leader, 0)
         self.master_conn = None
@@ -34,18 +37,16 @@ class Process(Thread):
     #     pass
 
     def paxos_conn_listener(self):
-        self.paxos_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.paxos_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         self.paxos_socket.bind(('localhost', PROCESS_PAXOS_PORT_START + self.process_id))
         self.paxos_socket.listen(5)
 
         while True:
-
             conn, addr = self.paxos_socket.accept()
             paxos_handler = Thread(target=self.paxos_recv_handler, args=(conn,))
             paxos_handler.start()
 
-    def chash(self):
+    def crash(self):
         exit(0)
 
     def paxos_recv_handler(self, conn):
@@ -111,18 +112,22 @@ class Process(Thread):
             if buf == '':
                 break
             requests = buf.split('\n')
+            # print requests
             for request in requests:
                 if request[0:3] == 'msg':
                     request_contents = request.split(' ')
-                    self.thread_lock.acquire()
-                    self.msg_wait_for_resp[int(request_contents[1])] = request
-                    self.thread_lock.release()
-                    request_message = RequestMessage(request)
-                    self.replica.recv_cv.acquire()
-                    self.replica.recv_queue.append(request_message)
-                    if len(self.replica.recv_queue) == 1:
-                        self.replica.recv_cv.notify()
-                    self.replica.recv_cv.release()
+                    if int(request_contents[1]) in self.chat_log:
+                        self.master_conn.sendall('ack ' + request_contents[1] + ' ' + str(len(self.chat_log)) + '\n')
+                    else:
+                        self.thread_lock.acquire()
+                        self.msg_wait_for_resp[int(request_contents[1])] = request
+                        self.thread_lock.release()
+                        request_message = RequestMessage(request)
+                        self.replica.recv_cv.acquire()
+                        self.replica.recv_queue.append(request_message)
+                        if len(self.replica.recv_queue) == 1:
+                            self.replica.recv_cv.notify()
+                        self.replica.recv_cv.release()
                 elif request == 'get chatLog':
                     send_msg = ''
                     self.chat_log_lock.acquire()
@@ -132,11 +137,56 @@ class Process(Thread):
                         else:
                             send_msg += ',' + self.chat_log[i].data
                     self.chat_log_lock.release()
-                    self.master_conn.sendall(send_msg)
+                    # print send_msg
+                    self.master_conn.sendall('chatLog ' + send_msg + '\n')
                 elif request == 'crash':
-                    self.chash()
-
-
+                    self.crash()
+                elif request == 'crashAfterP1b' or request == 'crashAfterP2b':
+                    crash_message = CrashMessage(request, [])
+                    self.accepter.recv_cv.acquire()
+                    self.accepter.recv_queue.append(crash_message)
+                    if len(self.accepter.recv_queue) == 1:
+                        self.accepter.recv_cv.notify()
+                    self.accepter.recv_cv.release()
+                elif request[0:8] == 'crashP1a':
+                    request_contents = request.split(' ')
+                    if len(request_contents) > 1:
+                        crash_message = CrashMessage(request_contents[0], request_contents[1:])
+                    else:
+                        crash_message = CrashMessage(request_contents[0], [])
+                    for id, scout in self.leader.scouts.iteritems():
+                        if scout.is_alive():
+                            scout.recv_cv.acquire()
+                            scout.recv_queue.append(crash_message)
+                            if len(scout.recv_queue) == 1:
+                                scout.recv_cv.notify()
+                            scout.recv_cv.release()
+                elif request[0:8] == 'crashP2a':
+                    request_contents = request.split(' ')
+                    if len(request_contents) > 1:
+                        crash_message = CrashMessage(request_contents[0], request_contents[1:])
+                    else:
+                        crash_message = CrashMessage(request_contents[0], [])
+                    for id, commander in self.leader.commanders.iteritems():
+                        if commander.is_alive():
+                            commander.recv_cv.acquire()
+                            commander.recv_queue.append(crash_message)
+                            if len(commander.recv_queue) == 1:
+                                commander.recv_cv.notify()
+                            commander.recv_cv.release()
+                elif request[0:13] == 'crashDecision':
+                    request_contents = request.split(' ')
+                    if len(request_contents) > 1:
+                        crash_message = CrashMessage(request_contents[0], request_contents[1:])
+                    else:
+                        crash_message = CrashMessage(request_contents[0], [])
+                    for id, commander in self.leader.commanders.iteritems():
+                        if commander.is_alive():
+                            commander.recv_cv.acquire()
+                            commander.recv_queue.append(crash_message)
+                            if len(commander.recv_queue) == 1:
+                                commander.recv_cv.notify()
+                            commander.recv_cv.release()
 
     def run(self):
         self.accepter.start()
@@ -146,8 +196,6 @@ class Process(Thread):
         paxos_listener = Thread(target=self.paxos_conn_listener)
         paxos_listener.start()
 
-        self.master_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.master_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.master_socket.bind(('localhost', self.port))
         self.master_socket.listen(5)
 

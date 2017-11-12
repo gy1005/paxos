@@ -65,3 +65,8 @@ class PreemptedMessage:
     def __init__(self, ballot_num):
         self.type = 'preempted'
         self.ballot_num = ballot_num
+
+class CrashMessage:
+    def __init__(self, type, set):
+        self.type = type
+        self.set = set

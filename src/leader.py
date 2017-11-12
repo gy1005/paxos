@@ -1,9 +1,9 @@
-import socket
-from threading import Thread, Lock, Condition
+
+from threading import Thread, Condition
 from scout import Scout
 from commander import Commander
 from utils import *
-from message import *
+
 
 class Leader(Thread):
     def __init__(self, process, id, num_server):

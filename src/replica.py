@@ -58,7 +58,7 @@ class Replica(Thread):
                 if int(command_contents[1]) in self.process.msg_wait_for_resp:
                     del self.process.msg_wait_for_resp[int(command_contents[1])]
                     self.process.master_conn.sendall('ack ' + command_contents[1] + ' '
-                                                     + str(len(self.process.chat_log) - 1))
+                                                     + str(len(self.process.chat_log)) + '\n')
                 self.slot_out += 1
                 self.process.thread_lock.release()
 

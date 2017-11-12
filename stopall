@@ -1,2 +1,2 @@
 #!/bin/bash
-
+ps -aux | grep ./src/process.py | awk '{print $2}' | xargs kill
