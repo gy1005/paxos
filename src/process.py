@@ -120,7 +120,7 @@ class Process(Thread):
             if buf == '':
                 break
             requests = buf.split('\n')
-            print requests
+            # print requests
             for request in requests:
                 if request[0:3] == 'msg':
                     request_contents = request.split(' ')
