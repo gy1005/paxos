@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import socket
 from threading import Thread, Lock
 from accepter import Accepter
@@ -37,17 +38,15 @@ class Process(Thread):
     #     pass
 
     def paxos_conn_listener(self):
-
         self.paxos_socket.bind(('localhost', PROCESS_PAXOS_PORT_START + self.process_id))
         self.paxos_socket.listen(5)
-
         while True:
             conn, addr = self.paxos_socket.accept()
             paxos_handler = Thread(target=self.paxos_recv_handler, args=(conn,))
             paxos_handler.start()
 
     def crash(self):
-        exit(0)
+        os._exit(0)
 
     def paxos_recv_handler(self, conn):
         request_msg = ''
