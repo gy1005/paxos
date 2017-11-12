@@ -81,17 +81,19 @@ class Process(Thread):
                         self.accepter.recv_cv.notify()
                     self.accepter.recv_cv.release()
                 elif request.type == 'p1b':
-                    self.leader.scouts[request.dest.scout_id].recv_cv.acquire()
-                    self.leader.scouts[request.dest.scout_id].recv_queue.append(request)
-                    if len(self.leader.scouts[request.dest.scout_id].recv_queue) == 1:
-                        self.leader.scouts[request.dest.scout_id].recv_cv.notify()
-                    self.leader.scouts[request.dest.scout_id].recv_cv.release()
+                    if request.dest.scout_id in self.leader.scouts:
+                        self.leader.scouts[request.dest.scout_id].recv_cv.acquire()
+                        self.leader.scouts[request.dest.scout_id].recv_queue.append(request)
+                        if len(self.leader.scouts[request.dest.scout_id].recv_queue) == 1:
+                            self.leader.scouts[request.dest.scout_id].recv_cv.notify()
+                        self.leader.scouts[request.dest.scout_id].recv_cv.release()
                 elif request.type == 'p2b':
-                    self.leader.commanders[request.dest.commander_id].recv_cv.acquire()
-                    self.leader.commanders[request.dest.commander_id].recv_queue.append(request)
-                    if len(self.leader.commanders[request.dest.commander_id].recv_queue) == 1:
-                        self.leader.commanders[request.dest.commander_id].recv_cv.notify()
-                    self.leader.commanders[request.dest.commander_id].recv_cv.release()
+                    if request.dest.commander_id in self.leader.commanders:
+                        self.leader.commanders[request.dest.commander_id].recv_cv.acquire()
+                        self.leader.commanders[request.dest.commander_id].recv_queue.append(request)
+                        if len(self.leader.commanders[request.dest.commander_id].recv_queue) == 1:
+                            self.leader.commanders[request.dest.commander_id].recv_cv.notify()
+                        self.leader.commanders[request.dest.commander_id].recv_cv.release()
                 elif  request.type == 'propose':
                     self.leader.recv_cv.acquire()
                     self.leader.recv_queue.append(request)
