@@ -82,7 +82,7 @@ class Scout(Thread):
                         # self.leader.thread_lock.acquire()
                         # self.leader.scouts.pop(self.id.scout_id)
                         # self.leader.thread_lock.release()
-                        self.leader.process.crash()
+                        exit(0)
                 else:
                     preempted_message = PreemptedMessage(recv_msg.ballot_num)
                     self.leader.recv_cv.acquire()
@@ -93,7 +93,7 @@ class Scout(Thread):
                     # self.leader.thread_lock.acquire()
                     # self.leader.scouts.pop(self.id.scout_id)
                     # self.leader.thread_lock.release()
-                    self.leader.process.crash()
+                    exit(0)
             if recv_msg.type == 'crashP1a':
                 self.crash_p1a = True
                 self.crash_set = recv_msg.set

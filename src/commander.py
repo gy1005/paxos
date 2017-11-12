@@ -84,7 +84,7 @@ class Commander(Thread):
                         # self.leader.thread_lock.acquire()
                         # self.leader.commanders.pop(self.id.commander_id)
                         # self.leader.thread_lock.release()
-                        self.leader.process.crash()
+                        exit(0)
                 else:
                     preempted_message = PreemptedMessage(recv_msg.ballot_num)
                     self.leader.recv_cv.acquire()
@@ -95,7 +95,7 @@ class Commander(Thread):
                     # self.leader.thread_lock.acquire()
                     # self.leader.commanders.pop(self.id.commander_id)
                     # self.leader.thread_lock.release()
-                    self.leader.process.crash()
+                    exit(0)
 
             elif recv_msg.type == 'crashP2a':
                 self.crash_p2a = True

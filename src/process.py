@@ -46,6 +46,7 @@ class Process(Thread):
             paxos_handler.start()
 
     def crash(self):
+        print "crash"
         os._exit(0)
 
     def paxos_recv_handler(self, conn):
