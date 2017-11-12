@@ -80,20 +80,26 @@ class Process(Thread):
                     if len(self.accepter.recv_queue) == 1:
                         self.accepter.recv_cv.notify()
                     self.accepter.recv_cv.release()
-                elif request.type == 'p1b':
+                elif request.type == 'p1b':                        
                     if request.dest.scout_id in self.leader.scouts:
+                        screen_lock.acquire()
+                        print request.dest.leader_id, request.dest.scout_id, self.leader.scouts, self.leader.id, self.leader.scout_id    
                         self.leader.scouts[request.dest.scout_id].recv_cv.acquire()
                         self.leader.scouts[request.dest.scout_id].recv_queue.append(request)
                         if len(self.leader.scouts[request.dest.scout_id].recv_queue) == 1:
                             self.leader.scouts[request.dest.scout_id].recv_cv.notify()
                         self.leader.scouts[request.dest.scout_id].recv_cv.release()
+                        screen_lock.release()
                 elif request.type == 'p2b':
                     if request.dest.commander_id in self.leader.commanders:
+                        screen_lock.acquire()
+                        print request.dest.leader_id, request.dest.commander_id, self.leader.commanders, self.leader.id, self.leader.commander_id            
                         self.leader.commanders[request.dest.commander_id].recv_cv.acquire()
                         self.leader.commanders[request.dest.commander_id].recv_queue.append(request)
                         if len(self.leader.commanders[request.dest.commander_id].recv_queue) == 1:
                             self.leader.commanders[request.dest.commander_id].recv_cv.notify()
                         self.leader.commanders[request.dest.commander_id].recv_cv.release()
+                        screen_lock.release()
                 elif  request.type == 'propose':
                     self.leader.recv_cv.acquire()
                     self.leader.recv_queue.append(request)
@@ -114,7 +120,7 @@ class Process(Thread):
             if buf == '':
                 break
             requests = buf.split('\n')
-            # print requests
+            print requests
             for request in requests:
                 if request[0:3] == 'msg':
                     request_contents = request.split(' ')

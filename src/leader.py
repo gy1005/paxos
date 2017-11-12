@@ -24,11 +24,12 @@ class Leader(Thread):
 
     def run(self):
         new_scout_id = ScoutID(self.id, self.scout_id)
-        scout_thread = Scout(self, new_scout_id, self.num_server, self.ballot_num)
-        scout_thread.start()
-        self.thread_lock.acquire()
+        scout_thread = Scout(self, new_scout_id, self.num_server, self.ballot_num)        
+        # self.thread_lock.acquire()
         self.scouts[new_scout_id.scout_id] = scout_thread
-        self.thread_lock.release()
+        scout_thread.start()
+        # self.thread_lock.release()
+        
         self.scout_id += 1
         while True:
             self.recv_cv.acquire()
@@ -43,11 +44,12 @@ class Leader(Thread):
                     if self.active:
                         pvalue = Pvalue(self.ballot_num, recv_msg.slot, recv_msg.command)
                         new_commander_id = CommanderID(self.id, self.commander_id)
-                        commander_thread = Commander(self, new_commander_id, self.num_server, pvalue)
-                        commander_thread.start()
-                        self.thread_lock.acquire()
+                        commander_thread = Commander(self, new_commander_id, self.num_server, pvalue)                        
+                        # self.thread_lock.acquire()
                         self.commanders[new_commander_id.commander_id] = commander_thread
-                        self.thread_lock.release()
+                        commander_thread.start()
+                        # self.thread_lock.release()
+                        
                         self.commander_id += 1
             elif recv_msg.type == 'adopted':
                 new_pvalues = pmax(recv_msg.pvalues)
@@ -60,10 +62,11 @@ class Leader(Thread):
                     pvalue = Pvalue(self.ballot_num, proposal.slot, proposal.command)
                     new_commander_id = CommanderID(self.id, self.commander_id)
                     commander_thread = Commander(self, new_commander_id, self. num_server, pvalue)
-                    commander_thread.start()
-                    self.thread_lock.acquire()
+                    
+                    # self.thread_lock.acquire()
                     self.commanders[new_commander_id.commander_id] = commander_thread
-                    self.thread_lock.release()
+                    commander_thread.start()
+                    # self.thread_lock.release()                    
                     self.commander_id += 1
                 self.active = True
             else:
@@ -71,9 +74,9 @@ class Leader(Thread):
                     self.active = False
                     self.ballot_num.round = recv_msg.ballot_num.round + 1
                     new_scout_id = ScoutID(self.id, self.scout_id)
-                    scout_thread = Scout(self, new_scout_id, self.num_server, self.ballot_num)
-                    scout_thread.start()
-                    self.thread_lock.acquire()
+                    scout_thread = Scout(self, new_scout_id, self.num_server, self.ballot_num)                    
+                    # self.thread_lock.acquire()
                     self.scouts[new_scout_id.scout_id] = scout_thread
-                    self.thread_lock.release()
+                    scout_thread.start()
+                    # self.thread_lock.release()                    
                     self.scout_id += 1
