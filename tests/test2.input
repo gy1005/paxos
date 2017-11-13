@@ -5,18 +5,17 @@
 4 start 5 10033
 0 msg 0 WhatsYourName
 -1 waitForAck 0
-3 crashP1a 0
+3 crashP1a 0 1
 4 crashAfterP2b
 1 msg 1 Alice
 2 msg 2 Bob
+3 msg 3 Carol
 -1 waitForAck 1
 -1 waitForAck 2
 3 start 5 10034
-3 msg 3 Carol
 4 start 5 10035
 4 msg 4 Haha
--1 waitForAck 3
--1 waitForAck 4
+-1 waitForAck 4 
 0 get chatLog
 3 get chatLog
 exit

@@ -84,6 +84,7 @@ class ClientHandler(Thread):
 
     def send(self, s):
         if self.valid:
+            # print "cmd" +  str(s)
             self.sock.send(str(s) + '\n')
 
     def close(self):

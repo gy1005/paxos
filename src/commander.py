@@ -7,7 +7,7 @@ import pickle
 
 
 class Commander(Thread):
-    def __init__(self, leader, id, num_server, pvalue):
+    def __init__(self, leader, id, num_server, pvalue, crash_p2a, crash_p2a_set, crash_decision, crash_decision_set):
         Thread.__init__(self)
         self.leader = leader
         self.num_server = num_server
@@ -16,10 +16,11 @@ class Commander(Thread):
         self.id = id
         self.recv_queue = []
         self.recv_cv = Condition()
-        self.crash_p2a = False
-        self.crash_p2a_set = []
-        self.crash_decision = False
-        self.crash_decision_set = []
+        self.crash_p2a = crash_p2a
+        self.crash_p2a_set = crash_p2a_set
+        self.crash_decision = crash_decision
+        self.crash_decision_set = crash_decision_set
+        self.if_stopped = False
 
     def run(self):
         p2a_message = P2aMessage(self.id, self.pvalue)
@@ -38,8 +39,10 @@ class Commander(Thread):
                 # TODO: socket error handler
                 pass
             if self.crash_p2a:
-                if i in self.crash_p2a_set:
+                if str(i) in self.crash_p2a_set:
                     self.crash_p2a_set.remove(str(i))
+                if len(self.crash_p2a_set) == 0:
+                    self.leader.process.crash()
         while True:
             self.recv_cv.acquire()
             while len(self.recv_queue) == 0:
@@ -58,7 +61,7 @@ class Commander(Thread):
                 #         pass
             recv_msg = self.recv_queue.pop(0)
             self.recv_cv.release()
-            assert recv_msg.type == 'p2b' or recv_msg.type == 'crashP2a' or recv_msg.type == 'crashDecision'
+            assert recv_msg.type == 'p2b' or recv_msg.type == 'crashP2a' or ecv_msg.type == 'crashDecision'
             if recv_msg.type == 'p2b':
                 if recv_msg.ballot_num == self.pvalue.ballot_num:
                     self.waitfor.remove(recv_msg.acceptor_id)
@@ -79,11 +82,14 @@ class Commander(Thread):
                                 # TODO: socket error handler
                                 pass
                             if self.crash_decision:
-                                if i in self.crash_decision_set:
+                                if str(i) in self.crash_decision_set:
                                     self.crash_decision_set.remove(str(i))
+                                if len(self.crash_decision_set) == 0:
+                                    self.leader.process.crash()
                         # self.leader.thread_lock.acquire()
                         # self.leader.commanders.pop(self.id.commander_id)
                         # self.leader.thread_lock.release()
+                        self.if_stopped = False
                         exit(0)
                 else:
                     preempted_message = PreemptedMessage(recv_msg.ballot_num)
@@ -95,6 +101,7 @@ class Commander(Thread):
                     # self.leader.thread_lock.acquire()
                     # self.leader.commanders.pop(self.id.commander_id)
                     # self.leader.thread_lock.release()
+                    self.if_stopped = False
                     exit(0)
 
             elif recv_msg.type == 'crashP2a':

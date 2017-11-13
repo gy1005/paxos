@@ -6,7 +6,7 @@ import pickle
 
 
 class Scout(Thread):
-    def __init__(self, leader, id, num_server, ballot_num):
+    def __init__(self, leader, id, num_server, ballot_num, crash_p1a, crash_p1a_set):
         Thread.__init__(self)
         self.id = id
         self.leader = leader
@@ -16,18 +16,25 @@ class Scout(Thread):
         self.pvalues = {}
         self.recv_queue= []
         self.recv_cv = Condition()
-        self.crash_p1a = False
-        self.crash_set = []
+        self.crash_p1a = crash_p1a
+        self.crash_p1a_set = crash_p1a_set
+        self.if_stopped = False
 
 
 
 
     def run(self):
+        screen_lock.acquire()
+        # print self.id.leader_id, self.id.scout_id, self.crash_p1a, self.crash_p1a_set
+        screen_lock.release()
         p1a_message = P1aMessage(self.id, self.ballot_num)
         p1a_message_str = pickle.dumps(p1a_message)
         for i in range(self.num_server):
+            screen_lock.acquire()
+            # print self.id.leader_id, self.id.scout_id, "send p1a to", i
+            screen_lock.release()
             if self.crash_p1a:
-                if len(self.crash_set) == 0:
+                if len(self.crash_p1a_set) == 0:
                     self.leader.process.crash()
             send_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_address = ('localhost', PROCESS_PAXOS_PORT_START + i)
@@ -39,8 +46,11 @@ class Scout(Thread):
                 # TODO: socket error handler
                 pass
             if self.crash_p1a:
-                if i in self.crash_set:
-                    self.crash_set.remove(str(i))
+                # print self.id.leader_id, self.id.scout_id, "crash_p1a"
+                if str(i) in self.crash_p1a_set:
+                    self.crash_p1a_set.remove(str(i))            
+                if len(self.crash_p1a_set) == 0:
+                    self.leader.process.crash()
 
         while True:
             self.recv_cv.acquire()
@@ -82,6 +92,8 @@ class Scout(Thread):
                         # self.leader.thread_lock.acquire()
                         # self.leader.scouts.pop(self.id.scout_id)
                         # self.leader.thread_lock.release()
+                        self.if_stopped = True
+                        # print self.id.leader_id, self.id.scout_id, "stop"
                         exit(0)
                 else:
                     preempted_message = PreemptedMessage(recv_msg.ballot_num)
@@ -93,8 +105,12 @@ class Scout(Thread):
                     # self.leader.thread_lock.acquire()
                     # self.leader.scouts.pop(self.id.scout_id)
                     # self.leader.thread_lock.release()
+                    self.if_stopped = True
+                    # print self.id.leader_id, self.id.scout_id, "stop"
                     exit(0)
+
             if recv_msg.type == 'crashP1a':
+                # print 'crashP1a received'
                 self.crash_p1a = True
                 self.crash_set = recv_msg.set
 

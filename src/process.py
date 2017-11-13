@@ -47,6 +47,7 @@ class Process(Thread):
             paxos_handler.start()
 
     def crash(self):
+        # print process_id, "crash"
         os._exit(0)
 
     def paxos_recv_handler(self, conn):
@@ -159,8 +160,14 @@ class Process(Thread):
                         crash_message = CrashMessage(request_contents[0], request_contents[1:])
                     else:
                         crash_message = CrashMessage(request_contents[0], [])
+                    self.leader.recv_cv.acquire()
+                    self.leader.recv_queue.append(crash_message)
+                    if len(self.leader.recv_queue) == 1:
+                        self.leader.recv_cv.notify()
+                    self.leader.recv_cv.release()
+                    
                     for id, scout in self.leader.scouts.iteritems():
-                        if scout.is_alive():
+                        if not scout.if_stopped:
                             scout.recv_cv.acquire()
                             scout.recv_queue.append(crash_message)
                             if len(scout.recv_queue) == 1:
@@ -172,8 +179,13 @@ class Process(Thread):
                         crash_message = CrashMessage(request_contents[0], request_contents[1:])
                     else:
                         crash_message = CrashMessage(request_contents[0], [])
+                    self.leader.recv_cv.acquire()
+                    self.leader.recv_queue.append(crash_message)
+                    if len(self.leader.recv_queue) == 1:
+                        self.leader.recv_cv.notify()
+                    self.leader.recv_cv.release()
                     for id, commander in self.leader.commanders.iteritems():
-                        if commander.is_alive():
+                        if not commander.if_stopped:
                             commander.recv_cv.acquire()
                             commander.recv_queue.append(crash_message)
                             if len(commander.recv_queue) == 1:
@@ -185,8 +197,13 @@ class Process(Thread):
                         crash_message = CrashMessage(request_contents[0], request_contents[1:])
                     else:
                         crash_message = CrashMessage(request_contents[0], [])
+                    self.leader.recv_cv.acquire()
+                    self.leader.recv_queue.append(crash_message)
+                    if len(self.leader.recv_queue) == 1:
+                        self.leader.recv_cv.notify()
+                    self.leader.recv_cv.release()
                     for id, commander in self.leader.commanders.iteritems():
-                        if commander.is_alive():
+                        if not commander.if_stopped:
                             commander.recv_cv.acquire()
                             commander.recv_queue.append(crash_message)
                             if len(commander.recv_queue) == 1:

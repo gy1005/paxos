@@ -3,7 +3,7 @@ from threading import Lock
 
 screen_lock = Lock()
 PROCESS_PAXOS_PORT_START = 15000
-RECV_TIMEOUT = 3
+RECV_TIMEOUT = 10
 
 class Decision:
     def __init__(self, slot, command):
