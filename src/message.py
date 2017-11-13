@@ -35,9 +35,9 @@ class P1aMessage:
 
 
 class P1bMessage:
-    def __init__(self, accepter_id, ballot_num, accepted, dest):
+    def __init__(self, acceptor_id, ballot_num, accepted, dest):
         self.type = "p1b"
-        self.accepter_id = accepter_id
+        self.acceptor_id = acceptor_id
         self.ballot_num = ballot_num
         self.accepted = accepted
         self.dest = dest
@@ -49,9 +49,9 @@ class P2aMessage:
         self.pvalue = pvalue
 
 class P2bMessage:
-    def __init__(self, accepter_id, ballot_num, dest):
+    def __init__(self, acceptor_id, ballot_num, dest):
         self.type = "p2b"
-        self.accepter_id = accepter_id
+        self.acceptor_id = acceptor_id
         self.ballot_num = ballot_num
         self.dest = dest
 

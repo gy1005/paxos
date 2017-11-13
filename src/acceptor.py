@@ -4,7 +4,7 @@ from message import *
 from utils import *
 import pickle
 
-class Accepter(Thread):
+class Acceptor(Thread):
     def __init__(self, id, process):
         Thread.__init__(self)
         self.id = id

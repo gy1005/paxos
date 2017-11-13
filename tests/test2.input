@@ -1,13 +1,22 @@
-0 start 3 10000
-1 start 3 10001
-2 start 3 10002
+0 start 5 10029
+1 start 5 10030
+2 start 5 10031
+3 start 5 10032
+4 start 5 10033
 0 msg 0 WhatsYourName
-0 waitForAck 0
+-1 waitForAck 0
+3 crashP1a 0
+4 crashAfterP2b
 1 msg 1 Alice
-1 waitForAck 1
 2 msg 2 Bob
-2 waitForAck 2
+-1 waitForAck 1
+-1 waitForAck 2
+3 start 5 10034
+3 msg 3 Carol
+4 start 5 10035
+4 msg 4 Haha
+-1 waitForAck 3
+-1 waitForAck 4
 0 get chatLog
-1 get chatLog
-2 get chatLog
+3 get chatLog
 exit

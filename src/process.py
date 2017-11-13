@@ -3,7 +3,7 @@ import os
 import sys
 import socket
 from threading import Thread, Lock
-from accepter import Accepter
+from acceptor import Acceptor
 from leader import Leader
 from replica import Replica
 from utils import *
@@ -26,7 +26,7 @@ class Process(Thread):
         self.paxos_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.paxos_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.paxos_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        self.accepter = Accepter(self.process_id, self)
+        self.acceptor = Acceptor(self.process_id, self)
         self.leader = Leader(self, self.process_id, self.num_server)
         self.replica = Replica(self, self.process_id, self.leader, 0)
         self.master_conn = None
@@ -75,11 +75,11 @@ class Process(Thread):
                 assert request.type == 'p1a' or request.type == 'p1b' or request.type == 'p2a' \
                        or request.type == 'p2b' or request.type == 'propose' or request.type == 'decision'
                 if request.type == 'p1a' or request.type == 'p2a':
-                    self.accepter.recv_cv.acquire()
-                    self.accepter.recv_queue.append(request)
-                    if len(self.accepter.recv_queue) == 1:
-                        self.accepter.recv_cv.notify()
-                    self.accepter.recv_cv.release()
+                    self.acceptor.recv_cv.acquire()
+                    self.acceptor.recv_queue.append(request)
+                    if len(self.acceptor.recv_queue) == 1:
+                        self.acceptor.recv_cv.notify()
+                    self.acceptor.recv_cv.release()
                 elif request.type == 'p1b':
                     if request.dest.scout_id in self.leader.scouts:
                         self.leader.scouts[request.dest.scout_id].recv_cv.acquire()
@@ -114,7 +114,7 @@ class Process(Thread):
             if buf == '':
                 break
             requests = buf.split('\n')
-            print requests
+            # print requests
             for request in requests:
                 if request[0:3] == 'msg':
                     request_contents = request.split(' ')
@@ -148,11 +148,11 @@ class Process(Thread):
                     self.crash()
                 elif request == 'crashAfterP1b' or request == 'crashAfterP2b':
                     crash_message = CrashMessage(request, [])
-                    self.accepter.recv_cv.acquire()
-                    self.accepter.recv_queue.append(crash_message)
-                    if len(self.accepter.recv_queue) == 1:
-                        self.accepter.recv_cv.notify()
-                    self.accepter.recv_cv.release()
+                    self.acceptor.recv_cv.acquire()
+                    self.acceptor.recv_queue.append(crash_message)
+                    if len(self.acceptor.recv_queue) == 1:
+                        self.acceptor.recv_cv.notify()
+                    self.acceptor.recv_cv.release()
                 elif request[0:8] == 'crashP1a':
                     request_contents = request.split(' ')
                     if len(request_contents) > 1:
@@ -194,7 +194,7 @@ class Process(Thread):
                             commander.recv_cv.release()
 
     def run(self):
-        self.accepter.start()
+        self.acceptor.start()
         self.leader.start()
         self.replica.start()
 

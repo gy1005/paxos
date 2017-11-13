@@ -71,7 +71,7 @@ class Scout(Thread):
                                 self.pvalues[accepted_pvalue.slot] = [accepted_pvalue]
                             else:
                                 self.pvalues[accepted_pvalue.slot].append(accepted_pvalue)
-                    self.waitfor.remove(recv_msg.accepter_id)
+                    self.waitfor.remove(recv_msg.acceptor_id)
                     if len(self.waitfor) < self.num_server / 2.0:
                         adopted_message = AdoptedMessage(self.ballot_num, self.pvalues)
                         self.leader.recv_cv.acquire()

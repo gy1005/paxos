@@ -61,7 +61,7 @@ class Commander(Thread):
             assert recv_msg.type == 'p2b' or recv_msg.type == 'crashP2a' or recv_msg.type == 'crashDecision'
             if recv_msg.type == 'p2b':
                 if recv_msg.ballot_num == self.pvalue.ballot_num:
-                    self.waitfor.remove(recv_msg.accepter_id)
+                    self.waitfor.remove(recv_msg.acceptor_id)
                     if len(self.waitfor) < self.num_server / 2.0:
                         decision_message = DecisionMessage(self.pvalue.slot, self.pvalue.command)
                         decision_message_str = pickle.dumps(decision_message)
